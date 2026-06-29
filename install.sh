@@ -73,180 +73,165 @@ echo -e "${BOLD}${WHITE}📦 ШАГ 2/7: УСТАНОВКА ЗАВИСИМОСТ
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e ""
 
-echo -e "${YELLOW}⏳ Обновление списка пакетов...${NC}"
-apt update -qq 2>/dev/null || true
-echo -e "${GREEN}✅ Список пакетов обновлен${NC}"
+echo -e "${YELLOW}⏳ Обновление пакетов...${NC}"
+apt update -qq 2>/dev/null
 
 echo -e "${YELLOW}⏳ Установка базовых пакетов...${NC}"
-apt install -y curl wget git ufw net-tools htop ca-certificates gnupg lsb-release 2>/dev/null || true
-echo -e "${GREEN}✅ Базовые пакеты установлены${NC}"
+apt install -y -qq curl wget git docker.io docker-compose-plugin ufw 2>/dev/null
 
-# Docker
-if ! command -v docker &> /dev/null; then
-    echo -e "${YELLOW}⏳ Установка Docker...${NC}"
-    curl -fsSL https://get.docker.com -o /tmp/get-docker.sh 2>/dev/null
-    sh /tmp/get-docker.sh 2>/dev/null || true
-    systemctl enable docker 2>/dev/null || true
-    systemctl start docker 2>/dev/null || true
-    echo -e "${GREEN}✅ Docker установлен${NC}"
-else
-    echo -e "${GREEN}✅ Docker уже установлен${NC}"
-fi
-
-# Docker Compose
-if ! command -v docker-compose &> /dev/null; then
-    echo -e "${YELLOW}⏳ Установка Docker Compose...${NC}"
-    apt install -y docker-compose-plugin 2>/dev/null || true
-    echo -e "${GREEN}✅ Docker Compose установлен${NC}"
-else
-    echo -e "${GREEN}✅ Docker Compose уже установлен${NC}"
-fi
-
+echo -e "${GREEN}✅ Все зависимости установлены${NC}"
 echo -e ""
 
 # ============================================================
-# ШАГ 3: НАСТРОЙКА БРАНДМАУЭРА
+# ШАГ 3: НАСТРОЙКА FIREWALL
 # ============================================================
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${WHITE}🛡️  ШАГ 3/7: НАСТРОЙКА БРАНДМАУЭРА${NC}"
+echo -e "${BOLD}${WHITE}🛡️  ШАГ 3/7: НАСТРОЙКА FIREWALL${NC}"
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e ""
 
-if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
-    echo -e "${YELLOW}⏳ Открываем порты...${NC}"
-    ufw allow 22/tcp 2>/dev/null || true
-    ufw allow 80/tcp 2>/dev/null || true
-    ufw allow 443/tcp 2>/dev/null || true
-    ufw allow 8000/tcp 2>/dev/null || true
-    echo -e "${GREEN}✅ Порты открыты: 22 (SSH), 80 (HTTP), 443 (HTTPS), 8000 (API)${NC}"
-else
-    echo -e "${YELLOW}⚠️  Брандмауэр не активен. Пропускаем настройку.${NC}"
-fi
+ufw allow 22/tcp >/dev/null 2>&1
+ufw allow 80/tcp >/dev/null 2>&1
+ufw allow 443/tcp >/dev/null 2>&1
+ufw allow 8000/tcp >/dev/null 2>&1
+ufw --force enable >/dev/null 2>&1
+
+echo -e "${GREEN}✅ Firewall настроен (открыты порты: 22, 80, 443, 8000)${NC}"
 echo -e ""
 
 # ============================================================
 # ШАГ 4: СБОР ДАННЫХ
 # ============================================================
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${WHITE}📝 ШАГ 4/7: ВВЕДИТЕ ДАННЫЕ${NC}"
+echo -e "${BOLD}${WHITE}📝 ШАГ 4/7: ВВЕДИТЕ ДАННЫЕ ДЛЯ НАСТРОЙКИ${NC}"
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e ""
 
-# 4.1 ТОКЕН
-echo -e "${BOLD}${CYAN}🤖 1. ТОКЕН TELEGRAM БОТА${NC}"
-echo -e "${WHITE}   Как получить: @BotFather → /newbot${NC}"
-echo -e "${WHITE}   Пример: 1234567890:ABCdefGHIjklMNOpqrsTUVwxyz${NC}"
-echo -e ""
-
-while true; do
-    echo -en "${GREEN}➜ Введите токен бота: ${NC}"
-    read -r BOT_TOKEN
-    if [[ "$BOT_TOKEN" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]]; then
-        echo -e "${GREEN}✅ Токен принят${NC}"
-        break
+# Функция для ввода
+get_input() {
+    local prompt="$1"
+    local default="$2"
+    local value
+    if [ -n "$default" ]; then
+        read -p "$prompt [$default]: " value
+        echo "${value:-$default}"
     else
-        echo -e "${RED}❌ Неверный формат! Попробуйте снова.${NC}"
+        read -p "$prompt: " value
+        echo "$value"
     fi
-done
-echo -e ""
+}
 
-# 4.2 TELEGRAM ID
-echo -e "${BOLD}${CYAN}👤 2. ВАШ TELEGRAM ID${NC}"
-echo -e "${WHITE}   Как получить: @userinfobot → любое сообщение${NC}"
-echo -e ""
+BOT_TOKEN=$(get_input "🤖 Токен бота (от @BotFather)" "")
+ADMIN_IDS=$(get_input "👤 Ваш Telegram ID (от @userinfobot)" "")
+XUI_HOST=$(get_input "🖥️  URL панели 3x-ui" "https://bedalagavpn.mooo.com:44300")
+XUI_USERNAME=$(get_input "👤 Логин 3x-ui" "pavel")
+XUI_PASSWORD=$(get_input "🔑 Пароль 3x-ui" "pavel")
+DOMAIN=$(get_input "🌐 Домен" "miniapp.bedalagavpn.mooo.com")
 
-while true; do
-    echo -en "${GREEN}➜ Введите ваш Telegram ID: ${NC}"
-    read -r ADMIN_IDS
-    if [[ "$ADMIN_IDS" =~ ^[0-9]+$ ]]; then
-        echo -e "${GREEN}✅ ID принят${NC}"
-        break
-    else
-        echo -e "${RED}❌ Только цифры!${NC}"
-    fi
-done
-echo -e ""
+# Генерация ключей
+JWT_SECRET=$(openssl rand -hex 32)
+SECRET_KEY=$(openssl rand -hex 32)
 
-# 4.3 3X-UI
-echo -e "${BOLD}${CYAN}🖥️  3. ДАННЫЕ ПАНЕЛИ 3X-UI${NC}"
-echo -e ""
-
-echo -en "${GREEN}➜ URL панели (Enter - https://bedalagavpn.mooo.com:44300): ${NC}"
-read -r XUI_HOST
-XUI_HOST=${XUI_HOST:-"https://bedalagavpn.mooo.com:44300"}
-
-echo -en "${GREEN}➜ Логин (Enter - pavel): ${NC}"
-read -r XUI_USERNAME
-XUI_USERNAME=${XUI_USERNAME:-"pavel"}
-
-echo -en "${GREEN}➜ Пароль (Enter - pavel): ${NC}"
-read -r XUI_PASSWORD
-XUI_PASSWORD=${XUI_PASSWORD:-"pavel"}
-echo -e ""
-
-# 4.4 ДОМЕН
-echo -e "${BOLD}${CYAN}🌐 4. ДОМЕН ИЛИ IP${NC}"
-SERVER_IP=$(curl -s ifconfig.me 2>/dev/null || echo "localhost")
-echo -en "${GREEN}➜ Введите домен (Enter - $SERVER_IP): ${NC}"
-read -r DOMAIN
-DOMAIN=${DOMAIN:-$SERVER_IP}
-echo -e "${GREEN}✅ Используется: $DOMAIN${NC}"
-echo -e ""
-
-# 4.5 SSL
-echo -e "${BOLD}${CYAN}🔒 5. НАСТРОЙКА SSL${NC}"
-if [[ "$DOMAIN" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo -e "${YELLOW}⚠️  IP-адрес. SSL не поддерживается.${NC}"
-    SSL_SETUP="n"
-else
-    echo -en "${GREEN}➜ Настроить SSL? (y/n): ${NC}"
-    read -r SSL_SETUP
-fi
-echo -e ""
-
-# 4.6 ПОДТВЕРЖДЕНИЕ
-echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${WHITE}📋 ПРОВЕРЬТЕ ДАННЫЕ${NC}"
-echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}🤖 Токен бота:${NC} $BOT_TOKEN"
-echo -e "${GREEN}👤 Telegram ID:${NC} $ADMIN_IDS"
-echo -e "${GREEN}🖥️  3x-ui:${NC} $XUI_HOST"
-echo -e "${GREEN}🌐 Домен:${NC} $DOMAIN"
-echo -e ""
-
-echo -en "${YELLOW}⚠️  Все верно? Продолжить? (y/N): ${NC}"
-read -r CONFIRM
-if [[ ! "$CONFIRM" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}🔄 Перезапустите скрипт.${NC}"
-    exit 0
-fi
+echo -e "${GREEN}✅ Данные сохранены${NC}"
 echo -e ""
 
 # ============================================================
-# ШАГ 5: .ENV
+# ШАГ 5: СОЗДАНИЕ .env
 # ============================================================
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${BOLD}${WHITE}📝 ШАГ 5/7: СОЗДАНИЕ КОНФИГУРАЦИИ${NC}"
+echo -e "${BOLD}${WHITE}📄 ШАГ 5/7: СОЗДАНИЕ .env ФАЙЛА${NC}"
 echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e ""
-
-JWT_SECRET=$(openssl rand -hex 32 2>/dev/null || echo "secret123")
-SECRET_KEY=$(openssl rand -hex 32 2>/dev/null || echo "secret456")
 
 cat > .env << EOF
+# YADRENO CABINET CONFIGURATION
 BOT_TOKEN=$BOT_TOKEN
 ADMIN_IDS=$ADMIN_IDS
 XUI_HOST=$XUI_HOST
 XUI_USERNAME=$XUI_USERNAME
 XUI_PASSWORD=$XUI_PASSWORD
 JWT_SECRET_KEY=$JWT_SECRET
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
-REFRESH_TOKEN_EXPIRE_DAYS=7
-DB_TYPE=sqlite
-DB_PATH=/app/data/app.db
-ALLOWED_ORIGINS=https://$DOMAIN,http://$DOMAIN,http://localhost:3000
+SECRET_KEY=$SECRET_KEY
+ALLOWED_ORIGINS=http://localhost:3000,https://$DOMAIN
 APP_NAME=Yadreno Cabinet
 APP_DEBUG=false
-APP_VERSION=1.0.0
-SECRET_KEY=$SECRET_KEY
+EOF
+
+echo -e "${GREEN}✅ .env файл создан${NC}"
+echo -e ""
+
+# ============================================================
+# ШАГ 6: ЗАПУСК ПРОЕКТА
+# ============================================================
+echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${WHITE}🚀 ШАГ 6/7: ЗАПУСК ПРОЕКТА${NC}"
+echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e ""
+
+echo -e "${YELLOW}⏳ Запуск контейнеров...${NC}"
+docker compose up -d --build >/dev/null 2>&1
+
+echo -e "${GREEN}✅ Контейнеры запущены${NC}"
+echo -e ""
+
+# ============================================================
+# ШАГ 7: НАСТРОЙКА SSL
+# ============================================================
+echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${WHITE}🔒 ШАГ 7/7: НАСТРОЙКА SSL${NC}"
+echo -e "${BOLD}${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e ""
+
+echo -e "${YELLOW}⏳ Установка Certbot...${NC}"
+apt install -y -qq certbot 2>/dev/null
+
+echo -e "${YELLOW}⏳ Получение SSL сертификата для $DOMAIN...${NC}"
+docker compose stop nginx >/dev/null 2>&1
+certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos --email porogras@mail.ru >/dev/null 2>&1
+docker compose start nginx >/dev/null 2>&1
+
+if [ -f "/etc/letsencrypt/live/$DOMAIN/fullchain.pem" ]; then
+    echo -e "${GREEN}✅ SSL сертификат получен и настроен${NC}"
+else
+    echo -e "${YELLOW}⚠️  SSL сертификат не получен. Проверьте домен и запустите позже:${NC}"
+    echo -e "   certbot certonly --standalone -d $DOMAIN"
+fi
+echo -e ""
+
+# ============================================================
+# ФИНАЛЬНЫЙ ЭКРАН
+# ============================================================
+echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${GREEN}🎉 УСТАНОВКА УСПЕШНО ЗАВЕРШЕНА${NC}"
+echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e ""
+echo -e "${BOLD}🌐 ДОСТУП К КАБИНЕТУ:${NC}"
+echo -e "   ➜ HTTP:  http://$DOMAIN"
+echo -e "   ➜ HTTPS: https://$DOMAIN"
+echo -e ""
+echo -e "${BOLD}📚 ДОКУМЕНТАЦИЯ API:${NC}"
+echo -e "   ➜ Swagger: https://$DOMAIN/docs"
+echo -e "   ➜ ReDoc:   https://$DOMAIN/redoc"
+echo -e ""
+echo -e "${BOLD}🖥️  ПАНЕЛЬ 3X-UI:${NC}"
+echo -e "   ➜ URL:     $XUI_HOST"
+echo -e "   ➜ Логин:   $XUI_USERNAME"
+echo -e "   ➜ Пароль:  $XUI_PASSWORD"
+echo -e ""
+echo -e "${BOLD}💡 ПОЛЕЗНЫЕ КОМАНДЫ:${NC}"
+echo -e "   ➜ docker compose ps        - статус контейнеров"
+echo -e "   ➜ docker compose logs -f   - логи в реальном времени"
+echo -e "   ➜ docker compose restart   - перезапуск"
+echo -e "   ➜ docker compose down      - остановка"
+echo -e ""
+echo -e "${BOLD}📂 ВАЖНЫЕ ФАЙЛЫ:${NC}"
+echo -e "   ➜ .env           - конфигурация ($PWD/.env)"
+echo -e "   ➜ data/          - база данных ($PWD/data)"
+echo -e ""
+echo -e "${BOLD}🔧 ПОДДЕРЖКА:${NC}"
+echo -e "   ➜ GitHub:  https://github.com/porkgras/yadreno-cabinet"
+echo -e "   ➜ Issues:  https://github.com/porkgras/yadreno-cabinet/issues"
+echo -e ""
+echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${BOLD}${GREEN}🚀 Спасибо за использование Yadreno Cabinet!${NC}"
+echo -e "${BOLD}${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
