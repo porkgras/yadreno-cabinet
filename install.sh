@@ -435,3 +435,14 @@ LOG_FILE=/app/logs/app.log
 BACKUP_ENABLED=true
 BACKUP_INTERVAL=86400  # 24 hours
 BACKUP_RETENTION=7     # days
+EOF
+    
+    check_status ".env файл создан" "Ошибка создания .env файла"
+    log "✅ Секретные ключи сгенерированы автоматически" "$GREEN"
+    
+    # Создание папок
+    mkdir -p data logs backups
+    check_status "Папки созданы" "Ошибка создания папок"
+    
+    echo ""
+}
