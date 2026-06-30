@@ -13,7 +13,7 @@ interface Tariff {
   traffic_limit: number
   period_days: number
   max_devices: number
-  is_active: bool
+  is_active: boolean
   price_formatted: string
 }
 

@@ -1,33 +1,21 @@
 import { useQuery } from '@tanstack/react-query'
-import { 
-  Key, 
-  Users, 
-  CreditCard, 
-  Clock,
-  Activity,
-  TrendingUp
-} from 'lucide-react'
+import { Shield, Users, Key, TrendingUp, Activity, Clock } from 'lucide-react'
 import api from '../services/api'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
 
-interface UserStats {
-  id: number
-  telegram_id: string
-  username: string
-  full_name: string
-  balance: number
-  keys_count: number
+interface DashboardStats {
+  total_users: number
+  total_keys: number
   active_keys: number
-  referrals_count: number
-  created_at: string
+  total_referrals: number
+  today_new_users: number
+  today_new_keys: number
 }
 
 export function DashboardPage() {
-  const { data: user, isLoading } = useQuery<UserStats>({
-    queryKey: ['user'],
+  const { data: stats, isLoading } = useQuery<DashboardStats>({
+    queryKey: ['dashboard-stats'],
     queryFn: async () => {
-      const response = await api.get('/users/me')
+      const response = await api.get('/api/stats/')
       return response.data
     }
   })
@@ -35,122 +23,95 @@ export function DashboardPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
-  const stats = [
+  const cards = [
     {
-      name: 'Активные ключи',
-      value: user?.active_keys || 0,
-      icon: Key,
-      color: 'text-blue-600',
-      bg: 'bg-blue-50 dark:bg-blue-900/20'
-    },
-    {
-      name: 'Рефералов',
-      value: user?.referrals_count || 0,
+      title: 'Всего пользователей',
+      value: stats?.total_users || 0,
       icon: Users,
-      color: 'text-green-600',
-      bg: 'bg-green-50 dark:bg-green-900/20'
+      color: 'bg-blue-500'
     },
     {
-      name: 'Баланс',
-      value: `${user?.balance || 0} ⭐`,
-      icon: CreditCard,
-      color: 'text-purple-600',
-      bg: 'bg-purple-50 dark:bg-purple-900/20'
+      title: 'Активные ключи',
+      value: stats?.active_keys || 0,
+      icon: Key,
+      color: 'bg-green-500'
     },
     {
-      name: 'Всего ключей',
-      value: user?.keys_count || 0,
-      icon: Activity,
-      color: 'text-orange-600',
-      bg: 'bg-orange-50 dark:bg-orange-900/20'
+      title: 'Всего ключей',
+      value: stats?.total_keys || 0,
+      icon: Shield,
+      color: 'bg-purple-500'
+    },
+    {
+      title: 'Рефералов',
+      value: stats?.total_referrals || 0,
+      icon: TrendingUp,
+      color: 'bg-orange-500'
     }
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Добро пожаловать, {user?.full_name || user?.username || 'Пользователь'}!
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Участник с {formatDistanceToNow(new Date(user?.created_at || ''), { 
-              addSuffix: true, 
-              locale: ru 
-            })}
-          </p>
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">📊 Дашборд</h1>
+        <div className="flex items-center gap-2 text-sm text-gray-500">
+          <Activity className="h-4 w-4" />
+          <span>Обновлено: {new Date().toLocaleTimeString()}</span>
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon
-          return (
-            <div key={stat.name} className="card p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    {stat.name}
-                  </p>
-                  <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`p-3 rounded-full ${stat.bg}`}>
-                  <Icon className={`h-6 w-6 ${stat.color}`} />
-                </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {cards.map((card, index) => (
+          <div key={index} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">{card.title}</p>
+                <p className="text-2xl font-bold mt-1">{card.value}</p>
+              </div>
+              <div className={`${card.color} p-3 rounded-lg`}>
+                <card.icon className="h-6 w-6 text-white" />
               </div>
             </div>
-          )
-        })}
+          </div>
+        ))}
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Последние действия
-            </h3>
-            <Clock className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Нет недавних действий</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">📈 Активность сегодня</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="text-gray-600">Новых пользователей</span>
+              <span className="font-semibold text-blue-600">{stats?.today_new_users || 0}</span>
+            </div>
+            <div className="flex justify-between items-center border-b pb-2">
+              <span className="text-gray-600">Создано ключей</span>
+              <span className="font-semibold text-green-600">{stats?.today_new_keys || 0}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Активных сессий</span>
+              <span className="font-semibold text-purple-600">{stats?.active_keys || 0}</span>
             </div>
           </div>
         </div>
 
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Быстрые действия
-            </h3>
-            <TrendingUp className="h-5 w-5 text-gray-400" />
-          </div>
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">⚡ Быстрые действия</h3>
           <div className="space-y-3">
-            <a
-              href="/purchase"
-              className="block w-full text-center btn-primary"
-            >
-              Купить VPN
-            </a>
-            <a
-              href="/keys"
-              className="block w-full text-center btn-secondary"
-            >
-              Мои ключи
-            </a>
-            <a
-              href="/referral"
-              className="block w-full text-center btn-secondary"
-            >
-              Реферальная программа
-            </a>
+            <button className="w-full bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium">
+              Создать новый ключ
+            </button>
+            <button className="w-full bg-green-50 text-green-700 px-4 py-2 rounded-lg hover:bg-green-100 transition-colors text-sm font-medium">
+              Пополнить баланс
+            </button>
+            <button className="w-full bg-purple-50 text-purple-700 px-4 py-2 rounded-lg hover:bg-purple-100 transition-colors text-sm font-medium">
+              Пригласить друга
+            </button>
           </div>
         </div>
       </div>

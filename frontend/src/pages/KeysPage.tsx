@@ -9,8 +9,6 @@ import {
   ExternalLink
 } from 'lucide-react'
 import api from '../services/api'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
 
 interface KeyData {
   id: number

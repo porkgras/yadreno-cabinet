@@ -5,10 +5,6 @@ import {
   Copy, 
   Download, 
   ExternalLink,
-  Calendar,
-  Server,
-  Wifi,
-  Shield,
   AlertTriangle
 } from 'lucide-react'
 import api from '../services/api'
